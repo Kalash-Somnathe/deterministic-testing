@@ -1,4 +1,4 @@
-# DESIGN.md
+# Design
 
 The design arguments behind `deterministic-testing`, the costs I accepted, and the questions I
 expect to be asked.
