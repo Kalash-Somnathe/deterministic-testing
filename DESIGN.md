@@ -1,4 +1,4 @@
-# DEFENCE.md
+# DESIGN.md
 
 The design arguments behind `deterministic-testing`, the costs I accepted, and the questions I
 expect to be asked.
@@ -169,84 +169,6 @@ The honest summary: this is a working implementation of the core idea, at a scal
 where I can explain every line. It is not a competitor.
 
 ---
-
-## 7. Ten questions I expect, with short answers
-
-**1. Prove the determinism. How do I know the seed really is enough?**
-Run `deterministic-testing verify --runs 100`, or `pytest -k determinism`. The trace digest is a
-SHA-256 over every event's step, virtual timestamp, kind, process and payload —
-not a summary. More importantly, the suite shells out to *separate interpreters*
-with `PYTHONHASHSEED` set to `0`, `1`, `424242` and `random` twice, and requires
-all of them to agree with each other and with the parent. I mutation-tested that:
-a `set`-iteration bug in the scheduler passes the in-process 100x test and fails
-the cross-process one. That is why both exist.
-
-**2. Why not just fix the flaky test with a retry?**
-Because the flake is the bug reporting itself. The example here double-credits a
-ledger; retrying the test hides it and it reaches production. There is a real
-version of that decision in the numbers: the intermediate `claim` fix reduced the
-failure rate from 85% to 12% of seeds, which in production would have looked
-exactly like a fix.
-
-**3. Your scheduler picks uniformly at random. Isn't a targeted search better?**
-Yes, and that is the obvious next step. PCT gives probabilistic bounds on finding
-bugs of a given depth by inserting a few priority-change points; FoundationDB's
-"buggify" biases toward hand-marked suspicious points. Uniform random is the
-honest baseline: it needs no tuning, and it found both bugs here in the first 11
-seeds.
-
-**4. What is the performance cost of all this indirection?**
-Every operation is a generator `send` plus a dict lookup plus a trace append —
-about 56,000 scheduler steps per second in CPython on this machine, at a mean of
-107 steps per run. But the comparison that matters is against wall-clock time, and
-virtual time wins by orders of magnitude: 10,000 seeds of the corrected pipeline
-cover 89 hours of simulated time in 21 seconds. The search is also embarrassingly
-parallel and this implementation does not exploit that.
-
-**5. How would I use this on a real service?**
-You would not point it at your service; you would write a model of the concurrent
-core as generators, keeping the real logic and replacing I/O with `Send`/`Recv`.
-That is a genuine cost and the main reason such tools do not get adopted. It pays
-off where the concurrency is the product — a ledger, a matching engine, a
-settlement pipeline, a replication protocol — and not where the concurrency is
-incidental.
-
-**6. Why is `Recv` a scheduler step even when a message is already waiting?**
-It makes "check the mailbox" an interleaving point. A surprising number of real
-check-then-act bugs live exactly there. It fell out of unifying two code paths and
-I kept it deliberately; it is documented in `_do_recv`.
-
-**7. What happens if the system under test cheats and calls `time.time()`?**
-It raises `NonDeterminismLeak` at that line. `deterministic_testing/guards.py` replaces
-`time.time`, `monotonic`, `perf_counter`, `sleep`, the module-level `random`
-functions, `uuid.uuid4` and `os.urandom` for the duration of every run, and
-restores them in a `finally`. It is a Python-level patch, not a sandbox: a
-reference bound at import time slips through, as does anything in C. It raises the
-cost of the mistake from zero to high.
-
-**8. Your invariants run after every step. Isn't that slow?**
-Yes, and it is the right trade. Checking at the end tells you the totals are
-wrong; checking every step tells you it happened at step 40, immediately after
-`worker-b` credited `item-0` a second time. The framework calls `describe()` only
-on failure, so the expensive string formatting is not on the hot path.
-
-**9. How do you know the shrunk scenario is really the same bug?**
-Every candidate must violate the same *named* invariant, not merely fail. And the
-minimal scenario is re-run from its own serialised description — the test
-`test_shrunk_scenario_replays_identically_many_times` replays it 30 times and
-requires one digest. What I do not claim is minimality: shrinking is a search over
-configurations, because removing a fault shifts every subsequent message sequence
-number.
-
-**10. What would you do next?**
-In order: parallelise the seed search across cores; add PCT-style biased
-scheduling with a depth bound; add process-crash and restart faults, which is the
-biggest missing fault class; add a causal-slice view so the shrunk trace shows
-only events on the dependency chain leading to the violation, which would take
-seed 1 from 43 events to about 12. Further out, the interesting question is
-whether you can drive real `asyncio` code by supplying a deterministic event loop,
-which would remove the model/implementation gap that is this design's main
-weakness.
 
 ---
 

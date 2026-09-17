@@ -181,7 +181,7 @@ rather than being discovered by an interviewer.
   report says which.
 * **The interleaving space is explored only at yield points.** A genuine data race
   on shared memory between two yields is invisible to this scheduler, by
-  construction. See DEFENCE.md.
+  construction. See DESIGN.md.
 * **The determinism guard is a Python-level patch, not a sandbox.** Code that
   bound a reference before the guard installed (`from time import time` at import
   time) slips through, as does anything in a C extension. It raises the cost of a

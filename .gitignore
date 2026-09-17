@@ -6,10 +6,14 @@ dist/
 .eggs/
 
 .pytest_cache/
+.benchmarks/
 .coverage
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+
+.env
+.env.*
 
 .venv/
 venv/
@@ -25,3 +29,6 @@ env/
 # artifacts/ and are committed on purpose.
 *.jsonl
 search-*.json
+
+# Internal work logs.
+PROGRESS*.md

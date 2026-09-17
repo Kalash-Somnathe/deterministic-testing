@@ -276,7 +276,7 @@ engine including disk and process crashes; it runs a real production codebase
 rather than a model, by making the whole system single-threaded and
 deterministic from the ground up; it swarm-tests continuously on hundreds of
 machines; and it biases seed selection toward interleavings that have historically
-found bugs. See DEFENCE.md.
+found bugs. See DESIGN.md.
 
 ---
 
@@ -300,7 +300,7 @@ scripts/export_web_data.py           runs the framework and writes the live demo
 web/                                 the live demo: a static page, no build step
 ```
 
-Further reading: **DEFENCE.md** for the design arguments and the honest costs;
+Further reading: **DESIGN.md** for the design arguments and the honest costs;
 **FAILURES.md** for what went wrong while building it, including the part where
 the determinism test turned out not to work.
 
