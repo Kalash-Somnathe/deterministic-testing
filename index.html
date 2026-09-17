@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deterministic Testing — every bug gets a seed number</title>
+<meta name="description" content="A deterministic simulation tester for concurrent systems: it turns a bug that happens once a week in production into a seed number that reproduces it every time.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b6e7f'/%3E%3Cpath d='M3 8h10M8 3v10' stroke='%23fff' stroke-width='1.4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<a class="skip" href="#trace">Skip to the trace</a>
+
+<header class="rail">
+  <div class="rail-in">
+    <span class="wordmark">Deterministic Testing</span>
+    <span class="rail-sub">deterministic simulation testing</span>
+    <nav class="rail-nav" aria-label="Sections">
+      <a href="#trace">trace</a>
+      <a href="#shrink">shrink</a>
+      <a href="#matrix">matrix</a>
+      <a href="#proof">proof</a>
+    </nav>
+    <button id="theme" class="theme" type="button" aria-label="Switch colour theme">
+      <span data-theme-label>auto</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+<!-- ── hero ───────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">the problem</p>
+      <h1>
+        Every engineer has a bug that happens once a week in production
+        and never in testing.
+      </h1>
+      <p class="claim">This turns it into a seed&nbsp;number.</p>
+      <p class="lede">
+        The non-determinism that makes a concurrency bug unreproducible does not come
+        from your program. It comes from the OS scheduler, the clock and the network.
+        Replace all three with things you control, drive them from a single integer,
+        and the program becomes a pure function of that integer — so a failure stops
+        being <em>an intermittent issue</em> and becomes a permanent address.
+      </p>
+    </div>
+
+    <!-- the seed plate: the page's control surface and its hero object -->
+    <div class="plate" id="plate">
+      <div class="plate-head">
+        <span class="plate-etch">seed</span>
+        <span class="plate-serial" id="plate-serial">—</span>
+      </div>
+      <div class="plate-field">
+        <label class="sr-only" for="seed-input">Seed number</label>
+        <input id="seed-input" type="text" inputmode="numeric" value="1"
+               autocomplete="off" spellcheck="false" aria-describedby="plate-status">
+        <button id="seed-prev" type="button" aria-label="Previous seed">&minus;</button>
+        <button id="seed-next" type="button" aria-label="Next seed">+</button>
+      </div>
+      <div class="plate-variants" role="group" aria-label="Consumer variant">
+        <button type="button" data-variant="buggy" class="on">buggy</button>
+        <button type="button" data-variant="claim">claim</button>
+        <button type="button" data-variant="fixed">fixed</button>
+      </div>
+      <p class="plate-status" id="plate-status" role="status">loading stored runs…</p>
+      <dl class="plate-readout" id="plate-readout"></dl>
+    </div>
+  </div>
+
+  <ul class="gauges" id="gauges"></ul>
+</section>
+
+<!-- ── the trace ──────────────────────────────────────────────────── -->
+<section id="trace" class="band">
+  <div class="marker"><span>trace</span></div>
+  <div class="band-head">
+    <h2>What actually happened, step by step</h2>
+    <p>
+      Five processes on five channels; simulated time runs left to right. Each arrow is
+      one message. Gold marks a fault the network injected on purpose — a drop, a delay,
+      a duplicate. The crimson rule is the instant an invariant stopped being true.
+    </p>
+  </div>
+
+  <div class="tape-shell">
+    <div class="tape-bar">
+      <div class="tape-id">
+        <strong id="tape-title">—</strong>
+        <span id="tape-meta"></span>
+      </div>
+      <div class="tape-controls">
+        <button id="btn-first" type="button" title="First event (Home)">&#124;&lt;</button>
+        <button id="btn-prev" type="button" title="Previous event (←)">&lt;</button>
+        <button id="btn-play" type="button" class="wide" title="Play / pause (Space)">play</button>
+        <button id="btn-next" type="button" title="Next event (→)">&gt;</button>
+        <button id="btn-last" type="button" title="Last event (End)">&gt;&#124;</button>
+        <button id="btn-breach" type="button" class="wide breach-btn" title="Jump to the violation (V)">violation</button>
+      </div>
+      <div class="tape-axis-mode" role="group" aria-label="Horizontal axis">
+        <button type="button" data-axis="time" class="on">time</button>
+        <button type="button" data-axis="step">steps</button>
+      </div>
+    </div>
+
+    <div class="tape-scroll" id="tape-scroll">
+      <svg id="tape" role="img" aria-label="Message trace across process lanes"></svg>
+    </div>
+
+    <div class="tape-foot">
+      <input id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Event position">
+      <output id="scrub-out">0 / 0</output>
+    </div>
+
+    <div class="detail" id="detail" aria-live="polite"></div>
+
+    <ul class="legend" id="legend">
+      <li><span class="k-msg"></span>message</li>
+      <li><span class="k-drop"></span>drop</li>
+      <li><span class="k-delay"></span>delay</li>
+      <li><span class="k-dup"></span>duplicate</li>
+      <li><span class="k-timeout"></span>timeout</li>
+      <li><span class="k-breach"></span>invariant violated</li>
+      <li class="hint">click an event, or focus the chart and use &larr; &rarr; Home End V Space</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── shrinking ──────────────────────────────────────────────────── -->
+<section id="shrink" class="band">
+  <div class="marker"><span>shrink</span></div>
+  <div class="band-head">
+    <h2>Then it deletes everything that was not the bug</h2>
+    <p>
+      A failing seed arrives as a wall of events. Delta-debugging re-runs the scenario
+      with faults and workload removed, keeping only what still reproduces the same named
+      invariant failure. Below: every event of the original run, and what survived.
+    </p>
+  </div>
+
+  <div class="shrink-shell">
+    <div class="shrink-switch" role="group" aria-label="Which shrink to show">
+      <button type="button" data-story="planted" class="on">planted bug &middot; seed 1</button>
+      <button type="button" data-story="unplanted">unplanted bug &middot; seed 11</button>
+    </div>
+    <div class="collapse" id="collapse"></div>
+    <div class="shrink-cols">
+      <div class="shrink-note" id="shrink-note"></div>
+      <figure class="minimal">
+        <figcaption>the whole bug report<span id="minimal-bytes"></span></figcaption>
+        <pre id="minimal-json"></pre>
+        <code class="cmd" id="minimal-cmd"></code>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ── the matrix ─────────────────────────────────────────────────── -->
+<section id="matrix" class="band">
+  <div class="marker"><span>matrix</span></div>
+  <div class="band-head">
+    <h2>The fix that looks exactly like a fix</h2>
+    <p>
+      Three versions of the same consumer, 10,000 seeds each, on a network that drops,
+      delays and duplicates. On a perfect network all three pass 10,000 out of 10,000 —
+      which is what a normal test suite measures.
+    </p>
+  </div>
+  <div class="matrix-shell">
+    <div id="matrix-chart"></div>
+    <aside class="argument" id="matrix-argument"></aside>
+  </div>
+</section>
+
+<!-- ── proof ──────────────────────────────────────────────────────── -->
+<section id="proof" class="band">
+  <div class="marker"><span>proof</span></div>
+  <div class="band-head">
+    <h2>Why the seed numbers can be trusted</h2>
+  </div>
+  <div class="proof-grid" id="proof-grid"></div>
+
+  <div class="limits">
+    <h3>What it cannot do</h3>
+    <ul>
+      <li>
+        <strong>Interleavings are explored only at yield points.</strong> A process runs
+        uninterrupted between one <code>yield</code> and the next, so a true data race on
+        shared memory is invisible to this tool by construction. It is the right tool for
+        message passing, timeouts, retries and idempotency; it is the wrong tool for memory
+        races.
+      </li>
+      <li>
+        <strong>Only what you model gets tested.</strong> The scheduler explores the
+        generators you wrote, not your production service. If the model and the service
+        disagree, the model wins and you have verified fiction.
+      </li>
+      <li>
+        <strong>Shrinking finds something smaller, not something minimal.</strong> Removing
+        a fault changes the message sequence, so shrinking is a search over configurations.
+        It took seed 1 from 91 events to 43; it took seed 11 from 141 to 139. The report
+        says which.
+      </li>
+      <li>
+        <strong>The determinism guard is a Python-level patch, not a sandbox.</strong> Code
+        holding a pre-bound reference slips through, as does anything inside a C extension.
+        It raises the cost of a mistake from zero to high; it does not make one impossible.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-grid">
+    <div>
+      <p class="eyebrow">run it yourself</p>
+      <pre class="cmd-block">pip install -e ".[dev]"
+
+deterministic-testing search --seeds 1000   <span class="c">#</span> hunt for a failing seed
+deterministic-testing replay 1 --focus      <span class="c">#</span> reproduce it, print the trace
+deterministic-testing shrink 1 --focus      <span class="c">#</span> reduce it to a minimal scenario
+deterministic-testing verify --runs 100     <span class="c">#</span> prove one seed replays identically</pre>
+    </div>
+    <div class="foot-meta">
+      <p>
+        Python 3.11, standard library only. Every figure on this page was produced by
+        <code>scripts/export_web_data.py</code>, which runs the real simulator, or copied
+        verbatim from the committed result files in <code>artifacts/</code>.
+      </p>
+      <p class="stamp" id="stamp"></p>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<noscript>
+  <p class="fallback">This page renders recorded simulation traces with JavaScript. Without it,
+  read <code>README.md</code>, <code>DEFENCE.md</code> and <code>FAILURES.md</code> in the repository.</p>
+</noscript>
+
+<script src="app.js"></script>
+</body>
+</html>
