@@ -1,0 +1,71 @@
+shrank 141 events / 7 faults -> 139 events / 5 faults in 36 candidate runs
+
+minimal scenario: seed=11 workload=4 faults=5
+invariant violated: each item credited at most once
+faults required:
+  - DROP(msg=11)
+  - DELAY(msg=23, +1151958us)
+  - DROP(msg=25)
+  - DUPLICATE(msg=32, copies=2)
+  - DELAY(msg=35, +655764us)
+
+[    1] t=  0.000000s SEND      producer       {"payload":{"amount":1,"key":"item-0","op":"submit"},"seq":1,"to":"broker"}
+[    9] t=  0.001000s SEND      broker         {"payload":{"amount":1,"attempt":1,"key":"item-0","op":"job","reply_to":"broker"},"seq":2,"to":"worker-a"}
+[   12] t=  0.002000s SEND      worker-a       {"payload":{"key":"item-0","op":"claim","reply_to":"worker-a"},"seq":3,"to":"store"}
+[   15] t=  0.003000s SEND      store          {"payload":{"key":"item-0","op":"claim_reply","req":null,"won":true},"seq":4,"to":"worker-a"}
+[   18] t=  0.004000s SEND      worker-a       {"payload":{"amount":1,"key":"item-0","op":"credit","reply_to":"worker-a"},"seq":5,"to":"store"}
+[   21] t=  0.005000s LOG       store          {"key":"item-0","label":"credit","total":1}
+[   22] t=  0.005000s SEND      store          {"payload":{"key":"item-0","op":"credit_reply","req":null},"seq":6,"to":"worker-a"}
+[   25] t=  0.006000s SEND      worker-a       {"payload":{"key":"item-0","op":"ack"},"seq":7,"to":"broker"}
+[   29] t=  0.050000s SEND      producer       {"payload":{"amount":1,"key":"item-1","op":"submit"},"seq":8,"to":"broker"}
+[   33] t=  0.051000s SEND      broker         {"payload":{"amount":1,"attempt":1,"key":"item-1","op":"job","reply_to":"broker"},"seq":9,"to":"worker-b"}
+[   36] t=  0.052000s SEND      worker-b       {"payload":{"key":"item-1","op":"claim","reply_to":"worker-b"},"seq":10,"to":"store"}
+[   39] t=  0.053000s SEND      store          {"payload":{"key":"item-1","op":"claim_reply","req":null,"won":true},"seq":11,"to":"worker-b"}
+[   39] t=  0.053000s DROP      store          {"seq":11,"value":0}
+[   41] t=  0.100000s SEND      producer       {"payload":{"amount":1,"key":"item-2","op":"submit"},"seq":12,"to":"broker"}
+[   44] t=  0.150000s SEND      producer       {"payload":{"amount":1,"key":"item-3","op":"submit"},"seq":13,"to":"broker"}
+[   47] t=  0.200000s LOG       producer       {"count":4,"label":"produced"}
+[   48] t=  0.200000s EXIT      producer       
+[   49] t=  0.302000s TIMEOUT   worker-b       
+[   50] t=  0.551000s TIMEOUT   broker         
+[   51] t=  0.551000s SEND      broker         {"payload":{"amount":1,"attempt":2,"key":"item-1","op":"job","reply_to":"broker"},"seq":14,"to":"worker-b"}
+[   54] t=  0.552000s SEND      worker-b       {"payload":{"key":"item-1","op":"claim","reply_to":"worker-b"},"seq":15,"to":"store"}
+[   57] t=  0.553000s SEND      store          {"payload":{"key":"item-1","op":"claim_reply","req":null,"won":false},"seq":16,"to":"worker-b"}
+[   60] t=  0.554000s SEND      worker-b       {"payload":{"key":"item-1","op":"ack"},"seq":17,"to":"broker"}
+[   65] t=  0.555000s SEND      broker         {"payload":{"amount":1,"attempt":1,"key":"item-2","op":"job","reply_to":"broker"},"seq":18,"to":"worker-a"}
+[   68] t=  0.556000s SEND      worker-a       {"payload":{"key":"item-2","op":"claim","reply_to":"worker-a"},"seq":19,"to":"store"}
+[   71] t=  0.557000s SEND      store          {"payload":{"key":"item-2","op":"claim_reply","req":null,"won":true},"seq":20,"to":"worker-a"}
+[   74] t=  0.558000s SEND      worker-a       {"payload":{"amount":1,"key":"item-2","op":"credit","reply_to":"worker-a"},"seq":21,"to":"store"}
+[   77] t=  0.559000s LOG       store          {"key":"item-2","label":"credit","total":2}
+[   78] t=  0.559000s SEND      store          {"payload":{"key":"item-2","op":"credit_reply","req":null},"seq":22,"to":"worker-a"}
+[   81] t=  0.560000s SEND      worker-a       {"payload":{"key":"item-2","op":"ack"},"seq":23,"to":"broker"}
+[   81] t=  0.560000s DELAY     worker-a       {"seq":23,"value":1151958}
+[   83] t=  1.055000s TIMEOUT   broker         
+[   84] t=  1.055000s SEND      broker         {"payload":{"amount":1,"attempt":2,"key":"item-2","op":"job","reply_to":"broker"},"seq":24,"to":"worker-a"}
+[   87] t=  1.056000s SEND      worker-a       {"payload":{"key":"item-2","op":"claim","reply_to":"worker-a"},"seq":25,"to":"store"}
+[   87] t=  1.056000s DROP      worker-a       {"seq":25,"value":0}
+[   89] t=  1.306000s TIMEOUT   worker-a       
+[   90] t=  1.555000s TIMEOUT   broker         
+[   91] t=  1.555000s SEND      broker         {"payload":{"amount":1,"attempt":3,"key":"item-2","op":"job","reply_to":"broker"},"seq":26,"to":"worker-b"}
+[   94] t=  1.556000s SEND      worker-b       {"payload":{"key":"item-2","op":"claim","reply_to":"worker-b"},"seq":27,"to":"store"}
+[   97] t=  1.557000s SEND      store          {"payload":{"key":"item-2","op":"claim_reply","req":null,"won":false},"seq":28,"to":"worker-b"}
+[  100] t=  1.558000s SEND      worker-b       {"payload":{"key":"item-2","op":"ack"},"seq":29,"to":"broker"}
+[  105] t=  1.559000s SEND      broker         {"payload":{"amount":1,"attempt":1,"key":"item-3","op":"job","reply_to":"broker"},"seq":30,"to":"worker-a"}
+[  108] t=  1.560000s SEND      worker-a       {"payload":{"key":"item-3","op":"claim","reply_to":"worker-a"},"seq":31,"to":"store"}
+[  111] t=  1.561000s SEND      store          {"payload":{"key":"item-3","op":"claim_reply","req":null,"won":true},"seq":32,"to":"worker-a"}
+[  111] t=  1.561000s DUPLICATE store          {"seq":32,"value":2}
+[  114] t=  1.562000s SEND      worker-a       {"payload":{"amount":1,"key":"item-3","op":"credit","reply_to":"worker-a"},"seq":33,"to":"store"}
+[  118] t=  1.563000s LOG       store          {"key":"item-3","label":"credit","total":3}
+[  119] t=  1.563000s SEND      store          {"payload":{"key":"item-3","op":"credit_reply","req":null},"seq":34,"to":"worker-a"}
+[  122] t=  1.564000s SEND      worker-a       {"payload":{"key":"item-3","op":"ack"},"seq":35,"to":"broker"}
+[  122] t=  1.564000s DELAY     worker-a       {"seq":35,"value":655764}
+[  125] t=  2.059000s TIMEOUT   broker         
+[  126] t=  2.059000s SEND      broker         {"payload":{"amount":1,"attempt":2,"key":"item-3","op":"job","reply_to":"broker"},"seq":36,"to":"worker-a"}
+[  129] t=  2.060000s SEND      worker-a       {"payload":{"key":"item-3","op":"claim","reply_to":"worker-a"},"seq":37,"to":"store"}
+[  131] t=  2.060000s SEND      worker-a       {"payload":{"amount":1,"key":"item-3","op":"credit","reply_to":"worker-a"},"seq":38,"to":"store"}
+[  135] t=  2.061000s LOG       store          {"key":"item-3","label":"credit","total":4}
+[  135] t=  2.061000s VIOLATION invariant      {"detail":"duplicate credits for ['item-3']; credits=['item-0', 'item-2', 'item-3', 'item-3'] total=4","invariant":"each item credited at most once"}
+  (56 of 139 events shown)
+
+minimal scenario written to artifacts\seed11_claim_minimal.json
+replay it with:  deterministic-testing replay 11 --plan artifacts\seed11_claim_minimal.json

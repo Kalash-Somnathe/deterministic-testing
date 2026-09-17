@@ -1,0 +1,76 @@
+{
+  "items": 4,
+  "results": {
+    "buggy/none": {
+      "first_failures": [],
+      "seconds": 12.55,
+      "statuses": {
+        "completed": 10000
+      }
+    },
+    "buggy/realistic": {
+      "first_failures": [
+        [
+          1,
+          "violation"
+        ],
+        [
+          2,
+          "violation"
+        ],
+        [
+          3,
+          "violation"
+        ]
+      ],
+      "seconds": 13.83,
+      "statuses": {
+        "completed": 1498,
+        "violation": 8502
+      }
+    },
+    "claim/none": {
+      "first_failures": [],
+      "seconds": 10.08,
+      "statuses": {
+        "completed": 10000
+      }
+    },
+    "claim/realistic": {
+      "first_failures": [
+        [
+          11,
+          "violation"
+        ],
+        [
+          16,
+          "violation"
+        ],
+        [
+          28,
+          "violation"
+        ]
+      ],
+      "seconds": 15.85,
+      "statuses": {
+        "completed": 8842,
+        "violation": 1158
+      }
+    },
+    "fixed/none": {
+      "first_failures": [],
+      "seconds": 8.16,
+      "statuses": {
+        "completed": 10000
+      }
+    },
+    "fixed/realistic": {
+      "first_failures": [],
+      "seconds": 13.98,
+      "statuses": {
+        "completed": 10000
+      }
+    }
+  },
+  "seeds_per_cell": 10000
+}

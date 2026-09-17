@@ -1,0 +1,11 @@
+{
+  "seed": 1,
+  "workload": 1,
+  "plan": [
+    {
+      "seq": 6,
+      "kind": "DROP",
+      "value": 0
+    }
+  ]
+}

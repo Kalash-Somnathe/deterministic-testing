@@ -1,0 +1,31 @@
+{
+  "seed": 11,
+  "workload": 4,
+  "plan": [
+    {
+      "seq": 11,
+      "kind": "DROP",
+      "value": 0
+    },
+    {
+      "seq": 23,
+      "kind": "DELAY",
+      "value": 1151958
+    },
+    {
+      "seq": 25,
+      "kind": "DROP",
+      "value": 0
+    },
+    {
+      "seq": 32,
+      "kind": "DUPLICATE",
+      "value": 2
+    },
+    {
+      "seq": 35,
+      "kind": "DELAY",
+      "value": 655764
+    }
+  ]
+}

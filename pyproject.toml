@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deterministic-testing"
+version = "0.1.0"
+description = "Deterministic simulation testing: turn a once-a-week production bug into a seed number."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Homepage = "https://kalash-somnathe.github.io/deterministic-testing/"
+Repository = "https://github.com/Kalash-Somnathe/deterministic-testing"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+deterministic-testing = "deterministic_testing.cli:main"
+
+[tool.setuptools]
+packages = ["deterministic_testing", "examples"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error"]
+
+# Deliberately NOT setting PYTHONHASHSEED here.
+#
+# Pinning the hash seed would make tests/test_determinism.py pass for the wrong
+# reason. That file spawns subprocesses with *varying* PYTHONHASHSEED precisely to
+# catch code whose behaviour depends on string hash salting -- iterating a set,
+# using hash() as an identifier. Fixing the salt globally would hide the one bug
+# class this project exists to demonstrate.

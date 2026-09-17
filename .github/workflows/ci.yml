@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # PYTHONHASHSEED is deliberately NOT set here.
+      #
+      # It is tempting: pinning it to 0 would make every run of the suite
+      # byte-identical and would look like good hygiene for a determinism
+      # project. It would in fact disable the most important test in the
+      # repository.
+      #
+      # tests/test_determinism.py spawns subprocesses with PYTHONHASHSEED set to
+      # 0, 1, 424242 and "random" (twice), and requires all of them to produce
+      # identical trace digests. That test exists to catch code whose behaviour
+      # depends on Python's per-process string hash salt -- iterating a set,
+      # using hash() as an identifier. Within a single process the salt is fixed,
+      # so such bugs are invisible to a same-process test loop.
+      #
+      # This is not hypothetical. A set-iteration bug was injected into the
+      # scheduler on purpose and confirmed to pass the "same seed, 100 runs,
+      # identical digest" test while failing the cross-process one. See
+      # FAILURES.md, section 1. Pinning the hash seed globally would have hidden
+      # it. The matrix above also runs on two operating systems and two Python
+      # versions for the same reason: the determinism claim is about portability,
+      # so it has to be tested somewhere other than one developer's laptop.
+      - name: Run the test suite
+        run: pytest -q
+
+      - name: Determinism proof, standalone
+        run: python -m deterministic_testing verify --runs 100 --seed 1
+
+      - name: The framework must still find the planted bug
+        run: |
+          python -m deterministic_testing search --seeds 200 --variant buggy && exit 1 || echo "found the bug, as expected"
+
+      - name: The fix must survive a seed search
+        run: python -m deterministic_testing search --seeds 2000 --variant fixed --all

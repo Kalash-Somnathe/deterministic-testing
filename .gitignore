@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
+env/
+
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Search checkpoints are machine-local scratch: they record which seeds have
+# already been run so a long search can resume. The interesting outputs live in
+# artifacts/ and are committed on purpose.
+*.jsonl
+search-*.json

@@ -1,0 +1,26 @@
+{
+  "machine": "Windows 10, Python 3.11.9, single process, no parallelism",
+  "workload": "examples/pipeline.py, 4 items, FaultConfig.realistic()",
+  "measurements": {
+    "buggy": {
+      "seeds": 10000,
+      "wall_seconds": 18.12,
+      "sched_steps_per_sec": 58585,
+      "simulated_hours": 17.6,
+      "speedup_vs_wallclock": 3488,
+      "note": "85% of seeds violate and stop early, so mean simulated time per run is short"
+    },
+    "fixed": {
+      "seeds": 10000,
+      "wall_seconds": 21.03,
+      "sched_steps_per_sec": 55776,
+      "simulated_hours": 89.0,
+      "speedup_vs_wallclock": 15239,
+      "note": "all runs complete, each reaching the 30s idle-timeout shutdown"
+    }
+  },
+  "mean_per_run": {
+    "scheduler_steps": 107,
+    "trace_events": 115
+  }
+}
